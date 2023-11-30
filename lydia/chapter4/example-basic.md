@@ -28,7 +28,7 @@ fun filterOddNumbers(numbers: List<Int>): List<Int> {
 
 ```kotlin
 fun transformToUppercase(names: List<String>): List<String> {
-    return names.map { it.toUpperCase() }
+    return names.map { it.uppercase() }
 }
 // Example usage:
 // val names = listOf("Alice", "Bob", "Charlie")
