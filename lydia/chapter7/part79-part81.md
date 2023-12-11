@@ -33,11 +33,11 @@ fun main() {
     - 수신 객체가 지정된 람다를 `확장 람다`의 동의어로 더 자주 사용한다.
 - 확장 함수와 마찬가지로 확장 람다도 여러 파라미터를 받을 수 있다.
 
-- 참고링크
-  - [코틀린 공식 문서 - 수신 객체가 지정된 함수 리터럴](https://kotlinlang.org/docs/lambdas.html#function-literals-with-receiver)
-  - [코틀린 공식 문서 - 확장 람다](https://kotlinlang.org/docs/lambdas.html#extension-lambdas)
-  - [코틀린 공식 문서 - 확장 함수](https://kotlinlang.org/docs/extensions.html#extension-functions)
-  - [확장 함수, 람다 함수, 고차 함수의 기초](https://mashup-android.vercel.app/mashup-11th/Ahnseokjoo/baselambda/BaseLambda)
+### 참고링크
+- [코틀린 공식 문서 - 수신 객체가 지정된 함수 리터럴](https://kotlinlang.org/docs/lambdas.html#function-literals-with-receiver)
+- [코틀린 공식 문서 - 확장 람다](https://kotlinlang.org/docs/lambdas.html#extension-lambdas)
+- [코틀린 공식 문서 - 확장 함수](https://kotlinlang.org/docs/extensions.html#extension-functions)
+- [확장 함수, 람다 함수, 고차 함수의 기초](https://mashup-android.vercel.app/mashup-11th/Ahnseokjoo/baselambda/BaseLambda)
 
 ---
 
@@ -78,6 +78,7 @@ fun main() {
     - 하지만 람다를 인자로 받는 함수가 인라인 함수라면, 모든 실행 시점 부가 비용을 없앨 수 있다.
     - 인라인 함수가 람다를 인자로 받으면, 컴파일러는 인라인 함수의 본문과 함께 람다 본문을 인라인 해준다.
     - 그러면 람다 본문이 외부 객체에 들어가는 것이 아니라, 인라인 함수 본문에 직접 들어가기 때문에 실행 시점의 부가 비용이 없어진다.
+### 참고링크
 - [코틀린의 영역함수](https://kotlinlang.org/docs/scope-functions.html#function-selection)
 
 
@@ -278,6 +279,8 @@ interface Y : X {
   - Y 인터페이스의 f() 함수는 Child를 반환한다.
   - 이는 X 인터페이스의 f() 함수가 반환하는 타입보다 더 구체적인 타입을 반환한다는 뜻이다.
   - 이런 경우를 `공변적인 반환 타입`이라고 한다.
+### 참고링크
+- [제네릭스 관련 블로그](https://readystory.tistory.com/201)
 
 
 ---
