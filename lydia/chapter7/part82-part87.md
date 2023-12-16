@@ -142,3 +142,178 @@ fun main() {
 ---
 
 
+## 83. 연산자 사용하기
+- 실전에서 연산자를 오버로드하는 경우는 드물다. 연산자 오버로드는 보통 직접 라이브러리를 만들 때만 사용한다.
+  - 연산자 오버로드는 편리한 문법이지만, 오버로드를 남용하면 코드를 읽기 어려워진다.
+  - 그리고 종종 주기적으로, 사용 중인지 눈치채지도 못한 채 오버로드한 연산자를 사용하기도 한다.
+- 예를들어 코틀린 라이브러리에는 컬렉션 처리를 손쉽게 해주는 수많은 연산자 정의가 들어있다.
+```kotlin
+fun main() {
+    val list = MutableList(10) { 'a' + it }
+    list[7] eq 'h' // operator get()
+    list.get(8) eq 'i' // 명시적 호출
+    list[7] = 'z' // operator set()
+    list.set(8, 'j') // 명시적 호출
+    list += 'k' // list.add('k') 와 같다.
+    list -= 'b' // list.remove('b') 와 같다.
+    ('d' in list) eq true // operator contains()
+    list.contains('e') eq true // 명시적 호출
+}
+```
+- 가변 컬렉션에 += 을 호출하면 컬렉션 내용을 변경하지만, +를 호출하면 예전 원소에 새 원소가 추가된 새로운 컬렉션을 반환한다.
+- 읽기 전용 컬렉션에 += 을 호출하면 예상하는 결과를 얻을 수 없을지도 모른다.
+```kotlin
+fun main() {
+    val list = listOf(1, 2)
+    list += 3 // 예상과 다를 수 있음
+    list eq "[1, 2, 3]" // list = list + 3 과 같다.
+}
+```
+- 가변 컬렉션에서 a += b 는 a를 변경하는 plusAssign()을 호출한다.
+- 읽기 전용 컬렉션에서는 plusAssign()이 들어있지 않다.
+  - 따라서 코틀린은 a += b를 a + b 로 해석한다.
+
+### 구조분해 연산자
+- 보통 직접 정의할 일이 거의 없는 또 다른 연산자로, 구조 분해에 사용되는 componantN() 함수를 말한다.
+  - componant1, componant2, componant3 등
+- 구조 분해는 객체의 여러 프로퍼티를 한 번에 여러 변수에 할당하는 것을 말한다.
+```kotlin
+class Point(val x: Int, val y: Int) {
+    operator fun component1() = x
+    operator fun component2() = y
+}
+
+fun main() {
+    val p = Point(10, 20)
+    val (x, y) = p // 구조 분해
+    x eq 10
+    y eq 20
+}
+```
+- data 클래스는 자동으로 componantN() 함수를 만들어준다.
+  - 코틀린은 data 클래스의 각 프로퍼티에 대해(data 클래스 생성자에 프로퍼티가 나타난 순서대로) componantN을 생성해준다.
+
+
+---
+
+
+## 84. 프로퍼티 위임
+- 프로퍼티는 접근자 로직을 위임할 수 있다.
+  - `by` 키워드를 사용하면 프로퍼티를 위임과 연결할 수 있다.
+> val(또는 var) 프로퍼티이름 by 위임객체이름
+- 프로퍼티가 val(읽기 전용)인 경우 위임 객체의 클래스에는 getValue() 함수 정의가 있어야 한다.
+- 프로퍼티가 var(읽고 쓰기 가능)인 경우 위임 객체의 클래스에는 getValue()와 setValue() 함수 정의가 있어야 한다.
+```kotlin
+class Name {
+    var value: String by Delegate() // Delegate() 객체를 사용해 프로퍼티 접근자 로직을 위임한다.
+}
+
+class Delegate {
+    operator fun getValue(thisRef: Any?, property: KProperty<*>): String { // getValue() 함수 정의
+        return "$thisRef, thank you for delegating '${property.name}' to me!"
+    }
+
+    operator fun setValue(thisRef: Any?, property: KProperty<*>, value: String) { // setValue() 함수 정의
+        println("$value has been assigned to '${property.name} in $thisRef.'")
+    }
+}
+
+fun main() {
+    val name = Name()
+    name.value = "Lydia" // setValue() 함수 호출
+    name.value eq "Lydia" // getValue() 함수 호출
+    
+    var delegate = Delegate()
+    delegate.value = "Lydia" // setValue() 함수 호출
+    delegate.value eq "Lydia" // getValue() 함수 호출
+}
+```
+- 위임 객체는 프로퍼티의 값을 저장하거나, 프로퍼티에 접근할 때 추가적인 로직을 수행할 수 있다.
+  - 프로퍼티의 값을 저장하는 위임 객체를 백킹 필드(backing field)라고 부른다.
+- SAM 변환을 사용해 getValue()와 setValue()를 정의할 수 있다.
+```kotlin
+class Add(val a: Int, val b: Int) {
+  val sum by Sum()
+}
+
+class Sum
+
+operator fun Sum.getValue(
+  thisRef: Add,
+  property: KProperty<*>
+) = thisRef.a + thisRef.b
+
+fun main() {
+  val add = Add(2, 3)
+  add.sum eq 5
+}
+```
+- 이 방식을 사용하면 변경하거나 상속할 수 없는 기존 클래스에 getValue()와 setValue()를 추가할 수 있어서 이 클래스의 인스턴스를 위임 객체로 사용할 수 있게 된다.
+  - 이런 방식으로 코틀린 표준 라이브러리에는 Lazy, Observable, Vetoable 등의 위임 객체가 들어있다.
+  - Lazy는 프로퍼티를 처음 사용할 때까지 초기화를 미루는 위임 객체다.
+  - Observable은 프로퍼티의 값이 바뀔 때마다 이벤트를 발생시키는 위임 객체다.
+  - Vetoable은 프로퍼티의 값을 변경하기 전에 이를 거부할 수 있는 위임 객체다.
+    - 이런 위임 객체를 사용하면 프로퍼티의 접근자 로직을 쉽게 재사용할 수 있다.
+
+
+---
+
+
+## 프로퍼티 위임 도구
+- 표준 라이브러리에는 특별한 프로퍼티 위임 연산이 들어있다.
+- Map은 위임 프로퍼티의 위임 객체로 쓰일 수 있도록 미리 설정된 코틀린 표준 라이브러리 타입 중 하나다.
+  - 어떤 클래스의 모든 프로퍼티를 저장하기 위해 Map을 하나만 써도 된다.
+    - 이 맵에서 각 프로퍼티는 String 타입의 키가 되고, 저장한 값은 맵에서 키와 연관된 값이 된다.
+```kotlin
+class Driver(
+  map: MutableMap<String, Any?>
+) {
+  var name: String by map
+  var age: Int by map
+  var id: String by map
+  var available: Boolean by map
+  var coord: Pair<Double, Double> by map
+}
+
+fun main() {
+  val info = mutableMapOf<String, Any?>(
+    "name" to "Lydia",
+    "age" to 21,
+    "id" to "1234567890",
+    "available" to false,
+    "coord" to Pair(51.5074, 0.1278)
+  )
+  
+  val driver = Driver(info)
+  driver.available eq false
+  driver.available = true
+  info eq "{name=Lydia, " +
+    "age=21, id=1234567890, " +
+    "available=true, coord=(51.5074, 0.1278)}"
+}
+```
+- 주의할 점은 driver.available = true 라고 설정할 때 원본맵인 info가 변경된다는 점이다.
+- 이런 방식으로 Map을 사용하면 클래스의 인스턴스를 직렬화하거나, 데이터베이스에 저장하거나, 네트워크를 통해 전송할 때 유용하다.
+  - 프로퍼티의 이름을 키로 사용하고, 프로퍼티의 값을 값으로 사용하는 Map을 사용하면 된다.
+- 이런 동작이 작동하는 이유는 코틀린 표준 라이브러리에서 Map의 확장 함수로 프로퍼티 위임을 가능하게 해주는 getValue()와 setValue()를 제공하기 때문이다.
+```kotlin
+operator fun <T> MutableMap<String, T>.getValue( // getValue() 함수 정의
+  thisRef: Any?, // 위임 객체
+  property: KProperty<*> // 위임 프로퍼티
+): T { // 반환 타입은 프로퍼티와 같아야 한다.
+  return this[property.name] as T
+}
+
+operator fun <T> MutableMap<String, T>.setValue( // setValue() 함수 정의
+  thisRef: Any?, // 위임 객체
+  property: KProperty<*>, // 위임 프로퍼티
+  value: T // 프로퍼티에 새로 할당할 값
+) {
+  this[property.name] = value
+}
+```
+
+
+---
+
+
