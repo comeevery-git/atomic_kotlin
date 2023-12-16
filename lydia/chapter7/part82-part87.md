@@ -317,3 +317,187 @@ operator fun <T> MutableMap<String, T>.setValue( // setValue() 함수 정의
 ---
 
 
+## 지연 계산 초기화
+- 지금까지 프로퍼티를 초기화하는 두 가지 방법을 배웠다.
+  - 프로퍼티를 정의하는 시점이나 생성자 안에서 초깃값을 저장한다.
+  - 프로퍼티에 접근할 때마다 값을 계산하는 커스텀 게터를 정의한다.
+- 이번에는 세 번째 경우를 설명한다.
+  - 초깃값을 계산하는 비용이 많이 들지만 프로퍼티를 선언하는 시점에 즉시 필요하지 않거나 아예 전혀 필요하지 않을 수도 있는 경우다.
+
+이런 경우 프로퍼티를 지연 계산(`lazy`)으로 초기화할 수 있다.
+1. 복잡하고 시간이 오래 걸리는 계산
+2. 네트워크 요청
+3. 데이터베이스 접근
+
+이런 프로퍼티를 생성 시점에 즉시 초기화하는 경우, 다음 두 가지 문제를 야기한다.
+1. 애플리케이션 초기 시작 시간이 길어질 수 있다.
+2. 전혀 사용하지 않거나 나중에 계산해도 될 프로퍼티 값을 계산하기 위해 불필요한 작업을 수행할 수 있다.
+
+- 지연 계산(lazy) 프로퍼티는 생성 시점이 아니라 처음 사용할 때 초기화된다.
+  - 지연 계산 프로퍼티를 사용하면 그 프로퍼티 값을 읽기 전 까지는 결코 비싼 초기화 계산을 수행하지 않는다.
+  - 지연 계산 프로퍼티가 코틀린에만 있는 개념은 아니다.
+    - 자바에서는 이를 `느긋한 초기화(lazy initialization)`라고 부른다.
+    - 자바에서는 이를 구현하기 위해 `synchronized` 키워드를 사용해야 한다.
+- 지연 계산 프로퍼티는 val로 선언해야 한다.
+> val lazyProperty by lazy { 초기화 식 }
+- lazy()는 초기화 로직이 들어있는 람다다.
+  - 언제나처럼 람다의 마지막 식이 결괏값이 되고 프로퍼티에 저장된다.
+```kotlin
+class LazySample {
+  init {
+    println("created!") // 1: 생성자 호출 시 출력
+  }
+  
+  val lazyStr: String by lazy {
+    println("computed!") // 4: 최초 접근 시 람다 실행
+    "my lazy"
+  }
+}
+
+fun main() {
+  val sample = LazySample() // 2: 생성자 호출
+  println("lazyStr = ${sample.lazyStr}") // 3: lazyStr에 최초 접근 시 람다 실행
+  println(" = ${sample.lazyStr}") // 5: 이미 초기화되어 람다 실행하지 않음
+}
+```
+- 프로퍼티를 초기화하는 세 가지 방법을 비교해보자.
+  - 정의 시점, 게터, 지연 계산
+```kotlin
+fun compute(i: Int): Int {
+  println("Compute $i")
+  return i
+}
+
+object Properties {
+  val atDefinition = compute(1)
+  val getter: Int
+    get() = compute(2)
+  val lazyInit: Int by lazy { compute(3) }
+  val never by lazy { compute(4) }
+}
+
+fun main() {
+  listOf(
+    Properties::atDefinition,
+    Properties::getter,
+    Properties::lazyInit
+  ).forEach { 
+    println("${it.name}")
+    println("${it.get()}")
+    println("${it.get()}")
+  }
+  println("""
+  Compute 1
+  atDefinition:
+  1
+  1
+  getter:
+  Compute 2
+  2
+  Compute 2
+  2
+  lazyInit:
+  Compute 3
+  3
+  3
+  """)
+}
+```
+- atDefinitaion은 Properties의 인스턴스를 생성할 때 초기화된다.
+- 'Compute 1'은 'atDefinition'보다 앞에 나타난다.
+  - 이는 초기화가 프로퍼티 접근 이전에 발생한다는 뜻이다.
+- getter 프로퍼티에 접근할 때마다 getter가 계산된다.
+  - 'Compute 2'가 프로퍼티에 접근할 때마다 한 번씩, 모두 두 번 나타난다.
+- lazyInit의 초기화 값은 never 프로퍼티에 처음 접근할 때 한 번만 계산된다.
+  - 프로퍼티에 접근하지 않으면 초기화가 일어나지 않는다.
+    - 'Compute 4'가 출력되지 않는다.
+
+
+---
+
+
+## 늦은 초기화
+- 때로는 by lazy()를 사용하지 않고 별도의 멤버 함수에서 클래스의 인스턴스가 생성된 다음에 프로퍼티를 초기화하고 싶은 경우가 있다.
+- 예를 들어 프레임워크나 라이브러리가 특별한 함수 안에서 초기화를 해야 한다고 요구할 수도 있다.
+  - 이런 경우 프로퍼티를 lateinit으로 선언할 수 있다.
+- 여기 인스턴스를 초기화하는 setUp() 메서드가 정의된 Bag 인터페이스가 있다.
+```kotlin
+interface Bag {
+  fun setUp()
+}
+```
+- Bag을 초기화하고 조작하면서 setUp() 호출을 보장해주는 라이브러리가 있고, 이 라이브러리를 재사용하길 원한다고 가정해보자.
+  - 이 라이브러리는 Bag의 생성자에서 프로퍼티를 초기화하지 않기 때문에 하위 클래스가 반드시 setUp() 안에서 초기화를 해야 한다고 요구한다.
+```kotlin
+class Suitcase : Bag {
+  private var items: String? = null
+  override fun setUp() {
+    items = "socks, jacket, laptop"
+  }
+  fun checkSocks(): Boolean =
+    items?.contains("socks") ?: false
+}
+
+fun main() {
+  val suitcase = Suitcase()
+  suitcase.checkSocks() eq false
+  suitcase.setUp()
+  suitcase.checkSocks() eq true
+}
+```
+- Suitcase는 setUp()을 오버라이드해서 items를 초기화하지만, items를 그냥 String으로 정의할 수는 없다.
+  - items를 String 타입으로 정의한다면 생성자에서 널이 아닌 초깃값으로 items를 초기화해야한다.
+  - 빈 문자열 같은 특별한 값을 사용하는 것은 나쁜 방식이다.
+    - 진짜 초기화됐는 지 여부를 알 수 없기 때문이다.
+    - null은 items가 초기화되지 않았음을 표시한다.
+- 이런 경우에 lateinit을 사용할 수 있다.
+  - items를 null이 될 수 있는 String?으로 선언하기에는 checkSocks()에서 한 것 처럼 모든 멤버함수에서 널 검사를 해야한다.
+    - 하지만 우리가 재사용중인 라이브러리는 setUp()을 호출해서 items를 초기화하기 때문에 매번 널 검사를 하는 건 불필요하다.
+```kotlin
+class BetterSuitcase : Bag {
+    lateinit var items: String // lateinit으로 선언
+    override fun setUp() {
+      items = "socks, jacket, laptop"
+    }
+  fun checkSocks() = "socks" in items
+}
+
+fun main() {
+  val suitcase = BetterSuitcase()
+  suitcase.checkSocks() eq false
+  suitcase.setUp()
+  suitcase.checkSocks() eq true
+}
+```
+- lateinit을 쓴다는 말은 items를 안전하게 널이 아닌 프로퍼티로 선언해도 된다는 뜻이다.
+  - 이런 프로퍼티는 널이 될 수 없으므로 널 검사를 할 필요가 없다.
+  - 하지만 lateinit을 사용하면 프로퍼티를 초기화하기 전까지는 프로퍼티에 접근할 수 없다.
+    - 프로퍼티를 초기화하기 전에 접근하면 예외가 발생한다.
+> <b>lateinit의 제약사항</b>
+> - lateinit은 var 프로퍼티에만 사용할 수 있다.
+> - 프로퍼티의 타입은 널이 아닌 타입이어야 한다.
+> - 프로퍼티가 원시 타입의 값이 아니어야 한다. (Int, Long, Double 등)
+> - 추상 클래스의 추상 프로퍼티나 인스턴스의 프로퍼티에 lateinit을 적용할 수 없다. (인터페이스의 프로퍼티는 가능하다.)
+> - 커스텀 게터 및 세터를 지원하는 프로퍼티에 lateinit을 적용할 수 없다.
+
+- isInitialized 프로퍼티를 사용해 프로퍼티가 초기화됐는 지 여부를 알 수 있다.
+  - 프로퍼티가 현재 영역 안에 있어야하며, :: 연산자를 사용해 프로퍼티에 접근할 수 있어야만 .initialized를 사용할 수 있다.
+    - 지역 lateinit var 정의는 지역 var나 val에 대한 참조를 허용하지 않기 때문에 isInitialized를 사용할 수 없다.
+```kotlin
+class BetterSuitcase : Bag {
+  lateinit var items: String
+  override fun setUp() {
+    items = "socks, jacket, laptop"
+  }
+  fun checkSocks() = "socks" in items
+}
+
+fun main() {
+  val suitcase = BetterSuitcase()
+  suitcase::items.isInitialized eq false
+  suitcase.setUp()
+  suitcase::items.isInitialized eq true
+}
+```
+
+
