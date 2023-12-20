@@ -74,10 +74,8 @@ fun main() {
 
 in 변성은 아이템을 수집하는 데 사용되며, out 변성은 아이템을 배포하는 데 사용됩니다.
 
+`문제지`
 ```kotlin
-/**
- * 문제지
- */
 // TODO: 아이템을 배포하는 인터페이스 작성 ItemProvider
 
 // TODO: 아이템을 수집하는 인터페이스 작성 ItemCollector
@@ -110,10 +108,9 @@ fun main() {
 
 ---
 
+
+`답안지`
 ```kotlin
-/**
- * 답안지
- */
 // 아이템을 제공하는 인터페이스
 interface ItemProvider<out T> {
     fun getItem(): T
@@ -155,3 +152,81 @@ fun main() {
 
 ---
 
+
+### 연습문제 4: 람다
+
+람다를 연습해봅시다.
+
+`문제지`
+```kotlin
+fun List<Int>.customFilter(filter: (Int) -> Boolean): List<Int> {
+    val result = mutableListOf<Int>()
+    for (item in this) {
+        // TODO: `filter` 람다 함수를 적용하고, `filter`가 `true`를 반환하는 요소만 결과 리스트에 추가하세요.
+    }
+    return result
+}
+
+val numbers = listOf(1, 2, 3, 4, 5, 6)
+// TODO: `customFilter` 함수에 람다 함수를 인자로 전달하여 짝수만 필터링하세요.
+val evenNumbers = numbers.customFilter { TODO() }
+println(evenNumbers)  // 결과는 [2, 4, 6]
+```
+
+`답안지`
+```kotlin
+fun List<Int>.customFilter(filter: (Int) -> Boolean): List<Int> {
+    val result = mutableListOf<Int>()
+    for (item in this) {
+        filter(item).let { if (it) result.add(item) }
+    }
+    return result
+}
+
+val numbers = listOf(1, 2, 3, 4, 5, 6)
+val evenNumbers = numbers.customFilter { number -> number % 2 == 0 }
+println(evenNumbers)  // 결과는 [2, 4, 6]
+```
+
+
+---
+
+
+### 연습문제 5: 확장 함수와 람다
+
+확장 함수와 람다를 연습해봅시다.
+
+`문제지`
+```kotlin
+// TODO List 클래스에 대한 확장 함수(printElements)를 작성하세요. 이 함수는 리스트의 모든 요소를 출력해야 합니다.
+
+// TODO 람다를 사용하여 위의 확장 함수와 동일한 기능을 하는 함수를 작성하세요.
+
+fun main() {
+    val myList = listOf("Hello", "Kotlin", "World")
+
+    myList.printElements() // "Hello", "Kotlin", "World" 출력
+    myList.printElements() // "Hello", "Kotlin", "World" 출력
+}
+```
+
+`답안지`
+```kotlin
+fun List<String>.printElements() {
+    this.forEach { println(it) }
+}
+
+fun printElements(): List<String>.() -> Unit = {
+    this.forEach { println(it) }
+}
+
+fun main() {
+    val myList = listOf("Hello", "Kotlin", "World")
+
+    myList.printElements() // "Hello", "Kotlin", "World" 출력
+    myList.printElements() // "Hello", "Kotlin", "World" 출력
+}
+```
+
+
+---
